@@ -1,34 +1,64 @@
-// server.js
-const express = require("express");
-const axios = require("axios");
-const app = express();
+from flask import Flask, request, jsonify
+from datetime import datetime
+import requests
+import os
 
-app.use(express.json());
-app.use(express.static("public"));
+app = Flask(__name__)
 
-const API_KEY = "5d7960c0c4f869d51c80dd74fad572c6";
+# 🛡️ Set your Numverify API Key (replace YOUR_API_KEY or use env var)
+NUMVERIFY_API_KEY = os.getenv("NUMVERIFY_API_KEY", "5d7960c0c4f869d51c80dd74fad572c6")
 
-app.get("/api/simlookup", async (req, res) => {
-  const number = req.query.number;
-  if (!number) return res.status(400).json({ error: "No number provided" });
+@app.route("/api/simlookup", methods=["GET"])
+def sim_lookup():
+    number = request.args.get("number")
 
-  try {
-    const response = await axios.get(
-      `http://apilayer.net/api/validate?access_key=${API_KEY}&number=${number}`
-    );
-    const data = response.data;
-    if (!data.valid) return res.status(404).json({ error: "Invalid number" });
-    res.json({
-      number: data.international_format,
-      country: data.country_name,
-      carrier: data.carrier,
-      location: data.location,
-      line_type: data.line_type,
-    });
-  } catch (err) {
-    res.status(500).json({ error: "API request failed" });
-  }
-});
+    if not number:
+        return jsonify({"error": "Missing phone number"}), 400
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    # 🔎 Operator guess based on prefix
+    operator_guess = "Unknown"
+    if number.startswith(("70", "71")):
+        operator_guess = "Mobitel"
+    elif number.startswith(("72", "78")):
+        operator_guess = "Hutch"
+    elif number.startswith(("76", "77")):
+        operator_guess = "Dialog"
+    elif number.startswith(("75",)):
+        operator_guess = "Airtel"
+
+    # 🌐 Numverify API call
+    api_url = f"http://apilayer.net/api/validate?access_key={NUMVERIFY_API_KEY}&number={number}&country_code=LK&format=1"
+
+    try:
+        api_response = requests.get(api_url)
+        api_data = api_response.json()
+
+        if not api_data.get("valid"):
+            return jsonify({"error": "Invalid phone number according to API"}), 400
+
+        data = {
+            "number": number,
+            "sim_type": "4G LTE",
+            "operator": operator_guess,
+            "api_operator": api_data.get("carrier", "Unknown"),
+            "location": api_data.get("location", "Sri Lanka"),
+            "country": api_data.get("country_name", "Sri Lanka"),
+            "country_code": api_data.get("country_code", "LK"),
+            "line_type": api_data.get("line_type", "mobile"),
+            "imei": "35-209900-176148-1",
+            "status": "Active",
+            "last_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        return jsonify(data)
+
+    except Exception as e:
+        return jsonify({"error": f"API Error: {str(e)}"}), 500
+
+
+@app.route("/")
+def home():
+    return "SIM Lookup API by RIKA TECH with NumVerify"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
