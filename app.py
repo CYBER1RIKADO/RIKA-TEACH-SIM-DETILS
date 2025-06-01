@@ -1,13 +1,3 @@
-from flask import Flask, request, jsonify
-import random
-from datetime import datetime
-
-app = Flask(__name__)
-
-@app.route("/", methods=["GET"])
-def home():
-    return "📱 SIM Lookup API is Running!"
-
 @app.route("/api/simlookup", methods=["GET"])
 def sim_lookup():
     number = request.args.get("number")
@@ -25,6 +15,3 @@ def sim_lookup():
     }
 
     return jsonify(fake_data)
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
