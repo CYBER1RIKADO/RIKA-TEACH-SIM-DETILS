@@ -4,8 +4,9 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-fake_operators = ["Dialog Axiata", "Mobitel", "Airtel", "Hutch"]
-locations = ["Colombo", "Kandy", "Galle", "Jaffna", "Negombo"]
+@app.route("/", methods=["GET"])
+def home():
+    return "📱 SIM Lookup API is Running!"
 
 @app.route("/api/simlookup", methods=["GET"])
 def sim_lookup():
@@ -16,9 +17,9 @@ def sim_lookup():
     fake_data = {
         "number": number,
         "sim_type": "4G LTE",
-        "operator": random.choice(fake_operators),
-        "location": f"{random.choice(locations)}, Sri Lanka",
-        "imei": f"35-{random.randint(100000, 999999)}-{random.randint(100000, 999999)}-1",
+        "operator": random.choice(["Dialog", "Mobitel", "Hutch"]),
+        "location": f"{random.choice(['Colombo', 'Kandy', 'Galle'])}, Sri Lanka",
+        "imei": f"35-{random.randint(100000,999999)}-{random.randint(100000,999999)}-1",
         "status": "Active",
         "last_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
