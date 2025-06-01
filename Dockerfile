@@ -1,10 +1,11 @@
-FROM python:3.10-slim
+FROM node:lts-buster
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY package.json package-lock.json ./
+RUN npm install
 
 COPY . .
 
-CMD ["python", "app.py"]
+EXPOSE 5000
+CMD ["node", "server.js"]
