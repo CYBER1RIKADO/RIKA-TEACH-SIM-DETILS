@@ -1,54 +1,33 @@
-from flask import Flask, request, jsonify, render_template
-from datetime import datetime
-import os
-import requests
+from flask import Flask, request, jsonify, render_template from truecallerpy import search_phonenumber from datetime import datetime
 
-app = Flask(__name__)
+app = Flask(name, template_folder="templates")
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+@app.route("/") def home(): return render_template("index.html")
 
-@app.route("/api/simlookup", methods=["GET"])
-def sim_lookup():
-    number = request.args.get("number")
+@app.route("/api/simlookup", methods=["GET"]) def sim_lookup(): number = request.args.get("number")
 
-    if not number:
-        return jsonify({"error": "Missing phone number"}), 400
+if not number:
+    return jsonify({"error": "Missing phone number"}), 400
 
-    # Local detection (SL-based operator)
-    operator = "Unknown"
-    if number.startswith(("70", "71")):
-        operator = "Mobitel"
-    elif number.startswith(("72", "78")):
-        operator = "Hutch"
-    elif number.startswith(("76", "77")):
-        operator = "Dialog"
-    elif number.startswith("75"):
-        operator = "Airtel"
+try:
+    # Use Truecaller API Wrapper
+    response = search_phonenumber(number, "LK", "Mozilla/5.0")
+    data = response.get("data", {})
 
-    # External NumVerify API
-    api_key = os.getenv("NUMVERIFY_API_KEY")
-    api_url = f"http://apilayer.net/api/validate?access_key={api_key}&number={number}&country_code=LK"
-
-    try:
-        response = requests.get(api_url)
-        api_data = response.json()
-    except Exception as e:
-        return jsonify({"error": "Failed to contact external API"}), 500
-
-    # Merge data
-    data = {
+    sim_data = {
         "number": number,
-        "sim_type": "4G LTE",
-        "operator": operator,
-        "location": api_data.get("location", "Sri Lanka"),
-        "imei": "35-209900-176148-1",
+        "sim_type": data.get("phones", [{}])[0].get("type", "Unknown"),
+        "operator": data.get("phones", [{}])[0].get("carrier", "Unknown"),
+        "location": data.get("addresses", [{}])[0].get("city", "Sri Lanka"),
+        "imei": "35-209900-176148-1",  # simulated
         "status": "Active",
-        "last_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        "last_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "name": data.get("name", "Unknown")
     }
+    return jsonify(sim_data)
 
-    return jsonify(data)
+except Exception as e:
+    return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+if name == "main": app.run(host="0.0.0.0", port=5000)
+
