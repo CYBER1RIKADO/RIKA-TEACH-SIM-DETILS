@@ -16,7 +16,6 @@
       margin: 0;
       overflow: hidden;
     }
-
     .container {
       background: rgba(0, 255, 204, 0.05);
       border: 2px solid #00ffcc;
@@ -72,9 +71,8 @@
     <button onclick="scanNumber()">SCAN</button>
     <div class="result" id="resultBox"></div>
   </div>
-
   <script>
-    function scanNumber() {
+    async function scanNumber() {
       const number = document.getElementById("phoneInput").value;
       const resultBox = document.getElementById("resultBox");
 
@@ -83,19 +81,30 @@
         return;
       }
 
-      const fakeData = `
+      resultBox.innerText = "[*] Scanning...";
+      try {
+        const res = await fetch(`/api/simlookup?number=${number}`);
+        const data = await res.json();
+
+        if (data.error) {
+          resultBox.innerText = `[!] ${data.error}`;
+        } else {
+          const output = `
 [SIM SCAN RESULT]
 ----------------------
-Number     : ${number}
-SIM Type   : 4G LTE
-Operator   : Dialog Axiata
-Location   : Colombo, Sri Lanka
-IMEI       : 35-209900-176148-1
-Status     : Active
-Last Seen  : 2025-05-31 16:40:52
+Number     : ${data.number}
+SIM Type   : ${data.sim_type}
+Operator   : ${data.operator}
+Location   : ${data.location}
+IMEI       : ${data.imei}
+Status     : ${data.status}
+Last Seen  : ${data.last_seen}
 ----------------------`;
-
-      resultBox.innerText = fakeData;
+          resultBox.innerText = output;
+        }
+      } catch (error) {
+        resultBox.innerText = `[!] Error: ${error.message}`;
+      }
     }
   </script>
 </body>
