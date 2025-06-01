@@ -1,30 +1,34 @@
-from flask import Flask, request, jsonify, render_template
-import random
-from datetime import datetime
+// server.js
+const express = require("express");
+const axios = require("axios");
+const app = express();
 
-app = Flask(__name__)
+app.use(express.json());
+app.use(express.static("public"));
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+const API_KEY = "5d7960c0c4f869d51c80dd74fad572c6";
 
-@app.route("/api/simlookup", methods=["GET"])
-def sim_lookup():
-    number = request.args.get("number")
-    if not number:
-        return jsonify({"error": "Missing number parameter"}), 400
+app.get("/api/simlookup", async (req, res) => {
+  const number = req.query.number;
+  if (!number) return res.status(400).json({ error: "No number provided" });
 
-    fake_data = {
-        "number": number,
-        "sim_type": "4G LTE",
-        "operator": random.choice(["Dialog", "Mobitel", "Hutch"]),
-        "location": f"{random.choice(['Colombo', 'Kandy', 'Galle'])}, Sri Lanka",
-        "imei": f"35-{random.randint(100000,999999)}-{random.randint(100000,999999)}-1",
-        "status": "Active",
-        "last_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
+  try {
+    const response = await axios.get(
+      `http://apilayer.net/api/validate?access_key=${API_KEY}&number=${number}`
+    );
+    const data = response.data;
+    if (!data.valid) return res.status(404).json({ error: "Invalid number" });
+    res.json({
+      number: data.international_format,
+      country: data.country_name,
+      carrier: data.carrier,
+      location: data.location,
+      line_type: data.line_type,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "API request failed" });
+  }
+});
 
-    return jsonify(fake_data)
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
